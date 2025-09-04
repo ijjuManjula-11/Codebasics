@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily To-Do List with Calendar</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 30px;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    /* Mini Calendar */
+    .calendar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .calendar input {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .task-input {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    input[type="text"], input[type="time"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 10px 15px;
+      background: #4CAF50;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    li.completed span {
+      text-decoration: line-through;
+      color: gray;
+    }
+    .time {
+      color: #007bff;
+      font-size: 0.9em;
+      margin-left: 8px;
+    }
+    .done-message {
+      text-align: center;
+      margin-top: 20px;
+      color: green;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Planner 📅</h1>
+
+    <!-- Calendar -->
+    <div class="calendar">
+      <label for="taskDate"><b>Select Date:</b></label>
+      <input type="date" id="taskDate">
+    </div>
+
+    <!-- Input area -->
+    <div class="task-input">
+      <input type="text" id="taskInput" placeholder="Enter your task...">
+      <input type="time" id="taskTime">
+      <button onclick="addTask()">Add</button>
+    </div>
+
+    <!-- Task List -->
+    <ul id="taskList"></ul>
+    <div id="doneMessage" class="done-message">🎉 All tasks done for today!</div>
+  </div>
+
+  <script>
+    const taskInput = document.getElementById('taskInput');
+    const taskTime = document.getElementById('taskTime');
+    const taskList = document.getElementById('taskList');
+    const doneMessage = document.getElementById('doneMessage');
+    const taskDate = document.getElementById('taskDate');
+
+    // Set today's date by default
+    const today = new Date().toISOString().split("T")[0];
+    taskDate.value = today;
+
+    // Load tasks when page loads
+    document.addEventListener('DOMContentLoaded', loadTasks);
+    taskDate.addEventListener('change', loadTasks);
+
+    function addTask() {
+      const taskText = taskInput.value.trim();
+      const timeText = taskTime.value;
+      const date = taskDate.value;
+
+      if (taskText === "") return;
+
+      const li = document.createElement('li');
+      const checkbox = document.createElement('input');
+      checkbox.type = "checkbox";
+      checkbox.onchange = updateTaskStatus;
+
+      const span = document.createElement('span');
+      span.textContent = taskText;
+
+      if (timeText) {
+        const timeSpan = document.createElement('span');
+        timeSpan.classList.add('time');
+        timeSpan.textContent = "⏰ " + timeText;
+        span.appendChild(timeSpan);
+      }
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      taskList.appendChild(li);
+
+      saveTasks();
+      taskInput.value = "";
+      taskTime.value = "";
+    }
+
+    function updateTaskStatus() {
+      this.parentElement.classList.toggle('completed', this.checked);
+      saveTasks();
+      checkAllDone();
+    }
+
+    function checkAllDone() {
+      const tasks = document.querySelectorAll('#taskList li');
+      const completed = document.querySelectorAll('#taskList li.completed');
+      doneMessage.style.display = (tasks.length > 0 && tasks.length === completed.length) 
+        ? "block" : "none";
+    }
+
+    function saveTasks() {
+      const date = taskDate.value;
+      const tasks = [];
+      document.querySelectorAll('#taskList li').forEach(li => {
+        const text = li.querySelector('span').childNodes[0].textContent.trim();
+        const timeSpan = li.querySelector('.time');
+        tasks.push({
+          text: text,
+          time: timeSpan ? timeSpan.textContent.replace("⏰ ","") : "",
+          done: li.classList.contains('completed')
+        });
+      });
+      const allTasks = JSON.parse(localStorage.getItem("tasks")) || {};
+      allTasks[date] = tasks;
+      localStorage.setItem("tasks", JSON.stringify(allTasks));
+    }
+
+    function loadTasks() {
+      taskList.innerHTML = "";
+      const date = taskDate.value;
+      const allTasks = JSON.parse(localStorage.getItem("tasks")) || {};
+      const savedTasks = allTasks[date] || [];
+      savedTasks.forEach(task => {
+        const li = document.createElement('li');
+        const checkbox = document.createElement('input');
+        checkbox.type = "checkbox";
+        checkbox.checked = task.done;
+        checkbox.onchange = updateTaskStatus;
+
+        const span = document.createElement('span');
+        span.textContent = task.text;
+
+        if (task.time) {
+          const timeSpan = document.createElement('span');
+          timeSpan.classList.add('time');
+          timeSpan.textContent = "⏰ " + task.time;
+          span.appendChild(timeSpan);
+        }
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        if (task.done) li.classList.add('completed');
+        taskList.appendChild(li);
+      });
+      checkAllDone();
+    }
+  </script>
+</body>
+</html>
